@@ -1,0 +1,48 @@
+# 환경 변수 (토큰 등 민감 정보)
+.env
+.env.local
+.env.*.local
+
+# 가상환경
+venv/
+env/
+ENV/
+.venv
+
+# Python 캐시
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 데이터 파일
+work_data.json
+*.json
+*.db
+*.sqlite
+
+# 로그 파일
+*.log
+bot.log
+logs/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE 설정 파일
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+
+# 배포 관련
+dist/
+build/
+*.egg-info/
+
+# Jupyter Notebook
+.ipynb_checkpoints
