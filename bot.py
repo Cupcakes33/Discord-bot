@@ -287,6 +287,9 @@ async def work_start(interaction: discord.Interaction):
 @channel_only()
 async def work_end(interaction: discord.Interaction):
     """퇴근 명령어"""
+    # 먼저 응답 대기 상태로 전환 (3초 제한 회피)
+    await interaction.response.defer()
+
     user_id = str(interaction.user.id)
     username = interaction.user.display_name
     current_time = datetime.now()
@@ -300,7 +303,7 @@ async def work_end(interaction: discord.Interaction):
         record = cursor.fetchone()
 
         if not record:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"❌ {interaction.user.mention}님은 출근 기록이 없습니다!",
                 ephemeral=True
             )
@@ -348,7 +351,7 @@ async def work_end(interaction: discord.Interaction):
         embed.add_field(name="휴식 시간", value=f"{break_hours}시간 {break_minutes}분", inline=True)
     embed.set_footer(text="퇴근 기록됨")
 
-    await interaction.response.send_message(embed=embed)
+    await interaction.followup.send(embed=embed)
 
 @bot.tree.command(name="휴식", description="휴식을 시작합니다")
 @channel_only()
