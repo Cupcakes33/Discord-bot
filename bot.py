@@ -6,12 +6,24 @@ from datetime import datetime, timedelta, time as dt_time
 from dotenv import load_dotenv
 import sqlite3
 from contextlib import contextmanager
+import logging
 
 # 환경 변수 로드
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 ALLOWED_CHANNEL_NAME = "출석-기록"
 DB_FILE = "work_records.db"
+
+# 로깅 설정
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s] [%(levelname)-8s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    handlers=[
+        logging.FileHandler('bot.log', encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
 
 # 봇 설정
 intents = discord.Intents.default()
@@ -249,6 +261,9 @@ async def weekly_report():
 @channel_only()
 async def work_start(interaction: discord.Interaction):
     """출근 명령어"""
+    # 먼저 응답 대기 상태로 전환 (3초 제한 회피)
+    await interaction.response.defer()
+
     user_id = str(interaction.user.id)
     username = interaction.user.display_name
     current_time = datetime.now()
@@ -259,7 +274,7 @@ async def work_start(interaction: discord.Interaction):
         # 이미 출근한 경우 확인
         cursor.execute('SELECT user_id FROM current_work_status WHERE user_id = ?', (user_id,))
         if cursor.fetchone():
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"❌ {interaction.user.mention}님은 이미 출근 상태입니다!",
                 ephemeral=True
             )
@@ -281,7 +296,7 @@ async def work_start(interaction: discord.Interaction):
     embed.add_field(name="출근 시간", value=time_str, inline=False)
     embed.set_footer(text="출근 기록됨")
 
-    await interaction.response.send_message(embed=embed)
+    await interaction.followup.send(embed=embed)
 
 @bot.tree.command(name="퇴근", description="퇴근을 기록하고 근무 시간을 계산합니다")
 @channel_only()
@@ -358,6 +373,9 @@ async def work_end(interaction: discord.Interaction):
 @app_commands.describe(사유="휴식 사유를 입력하세요")
 async def work_break(interaction: discord.Interaction, 사유: str):
     """휴식 명령어"""
+    # 먼저 응답 대기 상태로 전환 (3초 제한 회피)
+    await interaction.response.defer()
+
     user_id = str(interaction.user.id)
     username = interaction.user.display_name
     current_time = datetime.now()
@@ -370,7 +388,7 @@ async def work_break(interaction: discord.Interaction, 사유: str):
         record = cursor.fetchone()
 
         if not record:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"❌ {interaction.user.mention}님은 출근 상태가 아닙니다!",
                 ephemeral=True
             )
@@ -378,7 +396,7 @@ async def work_break(interaction: discord.Interaction, 사유: str):
 
         # 이미 휴식 중인 경우
         if record['break_time']:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"❌ {interaction.user.mention}님은 이미 휴식 중입니다!",
                 ephemeral=True
             )
@@ -404,12 +422,15 @@ async def work_break(interaction: discord.Interaction, 사유: str):
     embed.add_field(name="시간", value=time_str, inline=False)
     embed.set_footer(text="휴식 기록됨")
 
-    await interaction.response.send_message(embed=embed)
+    await interaction.followup.send(embed=embed)
 
 @bot.tree.command(name="복귀", description="휴식을 종료하고 업무에 복귀합니다")
 @channel_only()
 async def work_return(interaction: discord.Interaction):
     """복귀 명령어"""
+    # 먼저 응답 대기 상태로 전환 (3초 제한 회피)
+    await interaction.response.defer()
+
     user_id = str(interaction.user.id)
     current_time = datetime.now()
 
@@ -421,7 +442,7 @@ async def work_return(interaction: discord.Interaction):
         record = cursor.fetchone()
 
         if not record:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"❌ {interaction.user.mention}님은 출근 상태가 아닙니다!",
                 ephemeral=True
             )
@@ -429,7 +450,7 @@ async def work_return(interaction: discord.Interaction):
 
         # 휴식 중이 아닌 경우
         if not record['break_time']:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"❌ {interaction.user.mention}님은 휴식 중이 아닙니다!",
                 ephemeral=True
             )
@@ -471,12 +492,15 @@ async def work_return(interaction: discord.Interaction):
     embed.add_field(name="휴식 시간", value=f"{break_minutes}분 {break_seconds}초", inline=False)
     embed.set_footer(text="복귀 기록됨")
 
-    await interaction.response.send_message(embed=embed)
+    await interaction.followup.send(embed=embed)
 
 @bot.tree.command(name="현황", description="현재 출근한 인원을 확인합니다")
 @channel_only()
 async def work_status_all(interaction: discord.Interaction):
     """전체 현황 명령어"""
+    # 먼저 응답 대기 상태로 전환 (3초 제한 회피)
+    await interaction.response.defer()
+
     with get_db() as conn:
         cursor = conn.cursor()
 
@@ -485,7 +509,7 @@ async def work_status_all(interaction: discord.Interaction):
         all_users = cursor.fetchall()
 
         if not all_users:
-            await interaction.response.send_message("📊 현재 출근한 인원이 없습니다.", ephemeral=True)
+            await interaction.followup.send("📊 현재 출근한 인원이 없습니다.", ephemeral=True)
             return
 
     current_time = datetime.now()
@@ -535,12 +559,15 @@ async def work_status_all(interaction: discord.Interaction):
 
     embed.set_footer(text=f"총 {len(working) + len(on_break)}명 출근")
 
-    await interaction.response.send_message(embed=embed)
+    await interaction.followup.send(embed=embed)
 
 @bot.tree.command(name="상태", description="내 현재 출근 상태를 확인합니다")
 @channel_only()
 async def work_status(interaction: discord.Interaction):
     """개인 상태 확인 명령어"""
+    # 먼저 응답 대기 상태로 전환 (3초 제한 회피)
+    await interaction.response.defer(ephemeral=True)
+
     user_id = str(interaction.user.id)
 
     with get_db() as conn:
@@ -551,7 +578,7 @@ async def work_status(interaction: discord.Interaction):
         record = cursor.fetchone()
 
         if not record:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"📊 {interaction.user.mention}님은 현재 **퇴근** 상태입니다.",
                 ephemeral=True
             )
@@ -597,7 +624,7 @@ async def work_status(interaction: discord.Interaction):
         total_break_minutes = total_break // 60
         embed.add_field(name="누적 휴식 시간", value=f"{total_break_minutes}분", inline=True)
 
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    await interaction.followup.send(embed=embed, ephemeral=True)
 
 @bot.tree.command(name="명령어", description="봇 사용법을 확인합니다")
 @channel_only()
